@@ -1,0 +1,75 @@
+# version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D mv;
+
+layout(rgba32f, binding = 0) writeonly uniform image2D inpaint_mv;
+
+const ivec2 offsets[] = {
+    ivec2(-1, -1), ivec2(0, -1), ivec2(1, -1),
+    ivec2(-1, 0), ivec2(1, 0),
+    ivec2(-1, 1), ivec2(0, 1), ivec2(1, 1)
+};
+
+bool similarity[8];
+
+vec2 value[8];
+
+void main() {
+    ivec2 pixCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 frameSize = textureSize(mv, 0);
+    if (pixCoord.x >= frameSize.x || pixCoord.y >= frameSize.y) {
+		return;
+	}
+
+    float center = texelFetch(mv, pixCoord, 0).w;
+    if (center == 0.0) {
+        // thin detect from FSR
+        int count = 0;
+        for (int i = 0; i < 8; i++) {
+            ivec2 offset = offsets[i] + pixCoord;
+            if (offset.x >= frameSize.x || offset.y >= frameSize.y || offset.x < 0 || offset.y < 0) {
+                similarity[i] = false;
+                continue;
+            }
+            
+            float mv_valid = texelFetch(mv, offset, 0).w;
+            if (mv_valid == 0.0) {
+                similarity[i] = true;
+                continue;
+            }
+            
+            similarity[i] = false;
+            vec2 mv_val = texelFetch(mv, offset, 0).xy;
+            value[count] = mv_val;
+            count++;
+        }
+
+        bool left_up = similarity[0] && similarity[1] && similarity[3];
+        bool right_up = similarity[1] && similarity[2] && similarity[4];
+        bool left_down = similarity[3] && similarity[5] && similarity[6];
+        bool right_down = similarity[4] && similarity[6] && similarity[7];
+
+        if (!(left_up || right_up || left_down || right_down)) {
+            // median filter
+            for (int i = 0; i < count; i++) {
+                for (int j = i + 1; j < count; j++) {
+                    if (value[i].x > value[j].x) {
+                        vec2 temp = value[i];
+                        value[i] = value[j];
+                        value[j] = temp;
+                    }
+                }
+            }
+
+            vec2 mv_val = value[(count - 1) / 2];
+            imageStore(inpaint_mv, pixCoord, vec4(mv_val, 0.0, 1.0));
+        }
+
+        return;
+    }
+
+    imageStore(inpaint_mv, pixCoord, vec4(texelFetch(mv, pixCoord, 0).xy, 0.0, 1.0));
+}
+

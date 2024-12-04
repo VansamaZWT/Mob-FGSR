@@ -1,0 +1,24 @@
+# version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D fill_mv;
+layout(binding = 1) uniform sampler2D color;
+
+layout(rgba32f, binding = 0) writeonly uniform image2D warp_color;
+
+void main(){
+    ivec2 pixCoord = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 frameSize = textureSize(color, 0);
+	if (pixCoord.x >= frameSize.x || pixCoord.y >= frameSize.y) {
+		return;
+	}
+	vec2 size = vec2(frameSize);
+
+    vec2 pix_mv = texelFetch(fill_mv, pixCoord, 0).xy;
+    ivec2 flow = ivec2(round(pix_mv));
+
+	ivec2 back_pos = ivec2(pixCoord.x - flow.x, pixCoord.y + flow.y);
+    vec4 pix_color = texelFetch(color,back_pos,0);
+    imageStore(warp_color, pixCoord, pix_color);
+}

@@ -1,0 +1,23 @@
+# version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D disoc_mv;
+layout(binding = 1) uniform sampler2D mv_1;
+
+layout(rgba32f, binding = 0) writeonly uniform image2D fill_mv;
+
+void main(){
+    ivec2 pixCoord = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 frameSize = textureSize(mv_1, 0);
+	if (pixCoord.x >= frameSize.x || pixCoord.y >= frameSize.y) {
+		return;
+	}
+	vec2 size = vec2(frameSize);
+    vec4 cur_mv = texelFetch(disoc_mv, pixCoord, 0);
+    if(cur_mv.w == 0){
+        cur_mv = texelFetch(mv_1,pixCoord,0);
+        //cur_mv.y = -cur_mv.y;
+    }
+    imageStore(fill_mv, pixCoord, cur_mv);
+}
