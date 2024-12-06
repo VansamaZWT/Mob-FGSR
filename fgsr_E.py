@@ -172,12 +172,14 @@ def fgsr_E_main(label_index, label_path, seq_path, save_path, scene_name, progra
     print(scene_name)
     mv_0 = read_exr(os.path.join(seq_path, f"{scene_name}MotionVector.{str(input_index-1).zfill(4)}.exr"), channel=4)
     mv_1 = read_exr(os.path.join(seq_path, f"{scene_name}MotionVector.{str(input_index).zfill(4)}.exr"), channel=4)
-    depth_0 = read_exr(os.path.join(label_path, f"{scene_name}SceneDepth.{str(label_index-3).zfill(4)}.exr"), channel=4)
-    depth_1 = read_exr(os.path.join(label_path, f"{scene_name}SceneDepth.{str(label_index-1).zfill(4)}.exr"), channel=4)
+    depth_0 = read_exr(os.path.join(label_path, f"{scene_name}SceneDepth.{str(label_index-3).zfill(4)}.exr"), channel=1)
+    depth_1 = read_exr(os.path.join(label_path, f"{scene_name}SceneDepth.{str(label_index-1).zfill(4)}.exr"), channel=1)
     color_0 = read_exr(os.path.join(label_path, f"{scene_name}PreTonemapHDRColor.{str(label_index-3).zfill(4)}.exr"), channel=4)
     color_1 = read_exr(os.path.join(label_path, f"{scene_name}PreTonemapHDRColor.{str(label_index-1).zfill(4)}.exr"), channel=4)
     depth_0 = np.repeat(depth_0, 4, axis=-1)
+    depth_0[...,3] = 1
     depth_1 = np.repeat(depth_1, 4, axis=-1)
+    depth_1[...,3] = 1
     
     warp_mv,inpaint_mv,fill_mv,c= fgsr_E(mv_0, mv_1, depth_0, depth_1, color_0, color_1,programs)
     

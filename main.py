@@ -7,14 +7,19 @@ from OpenGL.GLUT import *
 from data_io import read_exr, write_exr, read_matrix
 from opengl_util import create_compute_shader, create_compute_program, create_texture, create_window, read_texture
 from fgsr_E import fgsr_E_main,fgsr_E_init
+from fgsr_I import fgsr_I_main,fgsr_I_init
 
 def main(root="E:/workspace/zwtdataset/", sub_paths=["Bunker/train1-30fps-combine"], mode="fgE", debug=False):
     if mode == "fgE":
-        shader_sources = ["fgsr_me.comp", "fgsr_inpaint.comp", "disocclusion_fill.comp", "warp.comp"]
+        shader_sources = ["fgsr_me_E.comp", "fgsr_inpaint.comp", "disocclusion_fill_E.comp", "warp.comp"]
 
         programs =fgsr_E_init(shader_sources)
         save_path_ = "./fgsr_E"
-
+    elif mode == "fgI" :
+        #shader_sources = ["fgsr_me.comp", "fgsr_inpaint.comp", "disocclusion_fill.comp", "warp.comp"]
+        shader_sources = ["fgsr_me_I.comp", "fgsr_inpaint.comp","warp_withDepth.comp","blending.comp"]
+        programs =fgsr_I_init(shader_sources)
+        save_path_ = "./fgsr_I"
     else:
         raise ValueError(f"Invalid mode: {mode}")
 
@@ -48,20 +53,35 @@ def main(root="E:/workspace/zwtdataset/", sub_paths=["Bunker/train1-30fps-combin
         save_path = os.path.join(save_path, label_path.split('/')[-1])
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        
-        for i in range(index_range[0] + 1, index_range[1] + 1):
-            label_index = 2 * i + 1
-            fgsr_E_main(label_index, label_path, input_path, save_path, scene_name, programs, debug)
-            
-            print(label_path + ": " + str(label_index))
+        if mode == "fgE":
+            for i in range(index_range[0] + 1, index_range[1] + 1):
+                
+                label_index = 2 * i + 1
+                
+                fgsr_E_main(label_index, label_path, input_path, save_path, scene_name, programs, debug)
+                
+                print(label_path + ": " + str(label_index))
 
-            # 如果处于debug模式，只循环3次
-            if debug:
-                if i >= index_range[0] + 5:
-                    break
+                # 如果处于debug模式，只循环3次
+                if debug:
+                    if i >= index_range[0] + 5:
+                        break
+        elif mode == "fgI":
+            for i in range(index_range[0] + 1, index_range[1] + 1):
+                
+                label_index = 2 * i - 1
+                
+                fgsr_I_main(label_index, label_path, input_path, save_path, scene_name, programs, debug)
+                
+                print(label_path + ": " + str(label_index))
+
+                # 如果处于debug模式，只循环3次
+                if debug:
+                    if i >= index_range[0] + 5:
+                        break
 
 
 if __name__ == "__main__":
     root = "D:/datasetZWT/me_test"
     sub_paths = ["Bunker/test10-30FPS"]
-    main(root, sub_paths, mode="fgE", debug=True)
+    main(root, sub_paths, mode="fgI", debug=True)

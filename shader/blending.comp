@@ -1,0 +1,53 @@
+# version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D color_1;
+layout(binding = 1) uniform sampler2D color_2;
+layout(binding = 2) uniform sampler2D depth_1;
+layout(binding = 3) uniform sampler2D depth_2;
+
+
+layout(rgba32f, binding = 0) writeonly uniform image2D pred_color;
+
+void main(){
+    ivec2 pixCoord = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 frameSize = textureSize(color_1, 0);
+	if (pixCoord.x >= frameSize.x || pixCoord.y >= frameSize.y) {
+		return;
+	}
+	vec2 size = vec2(frameSize);
+
+    float alpha = 0.5;
+    
+    float d1 = texelFetch(depth_1,pixCoord,0).x;
+    float d2 = texelFetch(depth_2,pixCoord,0).x;
+    float delta_Depth = d2-d1;
+    
+    float Td = 0.0028;
+
+
+    vec4 color1 = texelFetch(color_1, pixCoord, 0);
+    vec4 color2 = texelFetch(color_2, pixCoord, 0);
+
+    float brightness1 = max(color1.r, max(color1.g, color1.b));
+    float brightness2 = max(color2.r, max(color2.g, color2.b));
+
+    float delta_Brightness = abs(brightness1 - brightness2);
+
+    float Tb = 0.13;
+
+
+    if(delta_Depth>Td){
+        imageStore(pred_color,pixCoord,color2);
+    }else if(delta_Depth<-Td){
+        imageStore(pred_color,pixCoord,color1);
+    }else{
+        if(delta_Brightness>Tb){
+            vec4 lerpColor = (color1+color2)/2;
+            imageStore(pred_color,pixCoord,lerpColor);
+        }else{
+            imageStore(pred_color,pixCoord,color2);
+        }
+    }
+}
